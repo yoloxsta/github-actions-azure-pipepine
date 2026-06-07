@@ -5,7 +5,12 @@ on:
     branches:
       - dev
       - uat
+      - prod
   workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   router:
@@ -26,4 +31,10 @@ jobs:
     needs: router
     if: github.ref_name == 'uat'
     uses: ./.github/workflows/uat.yml
+    secrets: inherit
+
+  prod-pipeline:
+    needs: router
+    if: github.ref_name == 'prod'
+    uses: ./.github/workflows/prod.yml
     secrets: inherit

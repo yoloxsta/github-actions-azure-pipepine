@@ -1,4 +1,4 @@
-name: UAT Pipeline
+name: Prod Pipeline
 
 on:
   workflow_call:
@@ -7,7 +7,7 @@ env:
   ACR_NAME: myacrlab12345
   ACR_LOGIN_SERVER: myacrlab12345.azurecr.io
   IMAGE_NAME: app
-  IMAGE_TAG: uat-latest
+  IMAGE_TAG: prod-latest
 
 permissions:
   id-token: write
@@ -28,20 +28,13 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Login to ACR
-        run: az acr login --name ${{ env.ACR_NAME }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Build and Push using ACR Tasks
+        run: |
+          az acr build \
+            --registry ${{ env.ACR_NAME }} \
+            --image ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
+            --file Dockerfile \
+            .
 
       - name: Logout from Azure
         if: always()
