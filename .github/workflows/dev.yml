@@ -68,3 +68,29 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
+
+  deploy:
+    needs: [build-push, scan]
+    runs-on: self-hosted
+    env:
+      NAMESPACE: testing
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to AKS
+        run: |
+          # Replace image placeholder
+          sed -i "s|IMAGE_PLACEHOLDER|${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.image-tag }}|g" k8s/deployment.yaml
+          
+          # Apply deployment
+          kubectl apply -n ${{ env.NAMESPACE }} -f k8s/deployment.yaml
+          
+          # Wait for rollout
+          kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }} --timeout=120s
+
+      - name: Verify Deployment
+        run: |
+          kubectl get pods -n ${{ env.NAMESPACE }} -l app=${{ env.IMAGE_NAME }}
+          kubectl get service -n ${{ env.NAMESPACE }} ${{ env.IMAGE_NAME }}
