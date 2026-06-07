@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: app
-        image: IMAGE_PLACEHOLDER
+        image: myacrlab12345.azurecr.io/app:dev-44ce
         ports:
         - containerPort: 8080
         resources:
