@@ -16,7 +16,7 @@ jobs:
   build-push:
     runs-on: [self-hosted, linux, aks]
     outputs:
-      image-tag: ${{ steps.tag.outputs.IMAGE_TAG }}
+      IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
     
     steps:
       - name: Checkout code
@@ -65,7 +65,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.image-tag }}
+          image-ref: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}
           format: 'table'
           exit-code: '0'
           ignore-unfixed: true
@@ -84,7 +84,7 @@ jobs:
 
       - name: Deploy to AKS
         run: |
-          IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.image-tag }}"
+          IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
           echo "Deploying image: $IMAGE"
           
           # Update image in deployment.yaml
@@ -98,7 +98,7 @@ jobs:
 
       - name: Commit updated deployment.yaml
         run: |
-          IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.image-tag }}"
+          IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
           
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
