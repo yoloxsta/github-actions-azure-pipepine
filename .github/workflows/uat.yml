@@ -16,7 +16,6 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    environment: uat
     
     steps:
       - name: Checkout code
