@@ -7,7 +7,6 @@ env:
   ACR_NAME: myacrlab12345
   ACR_LOGIN_SERVER: myacrlab12345.azurecr.io
   IMAGE_NAME: app
-  IMAGE_TAG: dev-latest
 
 permissions:
   id-token: write
@@ -20,6 +19,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: tag
+        run: echo "IMAGE_TAG=dev-${GITHUB_SHA:0:4}" >> $GITHUB_OUTPUT
 
       - name: Azure Login with OIDC
         uses: azure/login@v2
@@ -39,7 +42,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          tags: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.IMAGE_TAG }}
+          build-args: |
+            ASPNETCORE_ENVIRONMENT=Development
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

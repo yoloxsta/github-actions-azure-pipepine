@@ -7,7 +7,6 @@ env:
   ACR_NAME: myacrlab12345
   ACR_LOGIN_SERVER: myacrlab12345.azurecr.io
   IMAGE_NAME: app
-  IMAGE_TAG: prod-latest
 
 permissions:
   id-token: write
@@ -21,6 +20,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set image tag
+        id: tag
+        run: echo "IMAGE_TAG=prod-${GITHUB_SHA:0:4}" >> $GITHUB_OUTPUT
+
       - name: Azure Login with OIDC
         uses: azure/login@v2
         with:
@@ -32,8 +35,9 @@ jobs:
         run: |
           az acr build \
             --registry ${{ env.ACR_NAME }} \
-            --image ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
+            --image ${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.IMAGE_TAG }} \
             --file Dockerfile \
+            --build-arg ASPNETCORE_ENVIRONMENT=Production \
             .
 
       - name: Logout from Azure

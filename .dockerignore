@@ -13,3 +13,5 @@
 **/.dockerignore
 README.md
 .gitignore
+*.md
+*.sln
