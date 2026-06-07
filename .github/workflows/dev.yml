@@ -40,6 +40,8 @@ jobs:
           context: .
           push: true
           tags: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          build-args: |
+            ASPNETCORE_ENVIRONMENT=Development
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
