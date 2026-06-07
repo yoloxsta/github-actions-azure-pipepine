@@ -10,7 +10,7 @@ on:
       - 'k8s/**'
   workflow_dispatch:
 
-jobs:
+permissions:
   id-token: write
   contents: read
 
