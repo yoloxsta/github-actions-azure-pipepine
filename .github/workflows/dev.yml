@@ -60,23 +60,28 @@ jobs:
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 
-      - name: Get AKS Credentials
+      - name: Get GitHub Actions runner IP and whitelist
         run: |
-          az aks get-credentials \
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          echo "Runner IP: $RUNNER_IP"
+          az aks update \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --name ${{ env.AKS_CLUSTER_NAME }} \
-            --overwrite-existing
+            --api-server-authorized-ip-ranges "40.89.158.230/32,${RUNNER_IP}/32"
 
       - name: Deploy to AKS
         run: |
-          # Replace image placeholder with actual image
           sed -i "s|IMAGE_PLACEHOLDER|${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.IMAGE_TAG }}|g" k8s/deployment.yaml
-          
-          # Apply deployment (skip validation for private cluster)
           kubectl apply -n testing -f k8s/deployment.yaml --validate=false
-          
-          # Wait for rollout
           kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n testing --timeout=120s
+
+      - name: Remove runner IP from whitelist
+        if: always()
+        run: |
+          az aks update \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AKS_CLUSTER_NAME }} \
+            --api-server-authorized-ip-ranges "40.89.158.230/32"
 
       - name: Verify Deployment
         run: |
