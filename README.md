@@ -232,3 +232,33 @@ az identity federated-credential delete \
   --name github-actions \
   --yes
 ```
+###
+```
+# For dev branch
+az identity federated-credential create \
+  --name github-actions-dev \
+  --resource-group aia-mi \
+  --identity-name mi-ado-agent \
+  --issuer https://token.actions.githubusercontent.com \
+  --subject repo:yoloxsta/github-actions-azure-pipepine:ref:refs/heads/dev \
+  --audiences api://AzureADTokenExchange
+
+# For uat branch
+az identity federated-credential create \
+  --name github-actions-uat \
+  --resource-group aia-mi \
+  --identity-name mi-ado-agent \
+  --issuer https://token.actions.githubusercontent.com \
+  --subject repo:yoloxsta/github-actions-azure-pipepine:ref:refs/heads/uat \
+  --audiences api://AzureADTokenExchange
+
+# For prod branch
+az identity federated-credential create \
+  --name github-actions-prod \
+  --resource-group aia-mi \
+  --identity-name mi-ado-agent \
+  --issuer https://token.actions.githubusercontent.com \
+  --subject repo:yoloxsta/github-actions-azure-pipepine:ref:refs/heads/prod \
+  --audiences api://AzureADTokenExchange
+
+```
