@@ -34,6 +34,7 @@ jobs:
             --registry ${{ env.ACR_NAME }} \
             --image ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
             --file Dockerfile \
+            --build-arg ASPNETCORE_ENVIRONMENT=Production \
             .
 
       - name: Logout from Azure
