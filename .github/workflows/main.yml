@@ -6,9 +6,11 @@ on:
       - dev
       - uat
       - prod
+    paths-ignore:
+      - 'k8s/**'
   workflow_dispatch:
 
-permissions:
+jobs:
   id-token: write
   contents: read
 
