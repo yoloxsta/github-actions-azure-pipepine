@@ -1,113 +1,84 @@
 # ACR Build and Push Pipeline
 
-GitHub Actions workflow for building and pushing Docker images to Azure Container Registry.
+GitHub Actions workflow for building and pushing Docker images to Azure Container Registry using OIDC authentication.
 
 ## Prerequisites
 
-### 1. Configure Federated Identity for OIDC
+### 1. Create Federated Identity Credential
 
-Run the following Azure CLI commands to set up the federated identity credential:
+Run this command on Azure CLI:
 
 ```bash
-# Get your Managed Identity resource ID
-IDENTITY_RESOURCE_ID=$(az identity show \
-  --resource-group aia-mi \
-  --name aia-mi \
-  --query id -o tsv)
-
-# Create federated identity credential for GitHub Actions
 az identity federated-credential create \
   --name github-actions \
-  --resource-group aia-mi \
-  --identity-name mi-ado-agent \
+  --resource-group <YOUR_RESOURCE_GROUP> \
+  --identity-name <YOUR_MANAGED_IDENTITY_NAME> \
   --issuer https://token.actions.githubusercontent.com \
-  --subject repo:yoloxsta/github-actions-azure-pipepine:ref:refs/heads/main \
+  --subject repo:<YOUR_GITHUB_USER>/<YOUR_REPO>:ref:refs/heads/main \
   --audiences api://AzureADTokenExchange
 ```
 
-Repository: https://github.com/yoloxsta/github-actions-azure-pipepine
+### 2. Add GitHub Secrets
 
-### 2. Add GitHub Secret
+Go to: Repository → Settings → Secrets and variables → Actions
 
-Add the following secret to your GitHub repository:
+Add these secrets:
 
-- Go to: Repository → Settings → Secrets and variables → Actions
-- Add secret:
-  - **Name**: `AZURE_TENANT_ID`
-  - **Value**: Your Azure tenant ID (find it with `az account show --query tenantId -o tsv`)
+| Secret Name | Value |
+|-------------|-------|
+| `AZURE_CLIENT_ID` | Your Managed Identity Client ID |
+| `AZURE_SUBSCRIPTION_ID` | Your Azure Subscription ID |
+| `AZURE_TENANT_ID` | Your Azure Tenant ID |
 
-### 3. ACR Permissions
+## Configuration
 
-Ensure the Managed Identity has the following role on the ACR:
-- `AcrPush` role
-- `AcrPull` role
+Update the `env` section in `.github/workflows/acr-build-push.yml`:
 
-You can verify with:
-```bash
-az role assignment list \
-  --assignee 6965c5d5-bbe2-4ce9-82d9-51f4fd87f6ff \
-  --scope /subscriptions/295e3026-e7e5-469f-b273-e0aed9438bc3/resourceGroups/aia-mi/providers/Microsoft.ContainerRegistry/registries/myacrlab12345
-```
+| Setting | Description |
+|---------|-------------|
+| `ACR_NAME` | Your ACR name (without .azurecr.io) |
+| `ACR_LOGIN_SERVER` | Your ACR login server (name.azurecr.io) |
+| `IMAGE_NAME` | Docker image name |
 
-## Workflow Details
+## Workflow Triggers
 
-| Setting | Value |
-|---------|-------|
-| **ACR Name** | myacrlab12345 |
-| **ACR Login Server** | myacrlab12345.azurecr.io |
-| **Image Name** | app |
-| **Subscription ID** | 295e3026-e7e5-469f-b273-e0aed9438bc3 |
-| **Resource Group** | aia-mi |
-| **Managed Identity Client ID** | 4aabd5c7-07bc-4b18-8895-478c2ced7741 |
+- Push to `main` or `master` branch
+- Pull requests to `main` or `master` branch
+- Manual dispatch from Actions tab
 
-## Authentication Method
+## Image Tag
 
-This workflow uses **OIDC (OpenID Connect)** for passwordless authentication with Azure. Benefits:
-- No secrets or credentials stored in GitHub
-- Short-lived tokens (more secure)
-- No credential rotation required
-
-## Tags Applied
-
-Each build creates two tags:
-- `<sha>`: The Git commit SHA (e.g., `app:abc123`)
-- `latest`: The latest build
-
-## Triggering the Workflow
-
-The workflow runs on:
-- Push to `main` or `master` branches
-- Pull requests to `main` or `master` branches
-- Manual dispatch via GitHub Actions UI
+The workflow pushes a single tag:
+- `<ACR_LOGIN_SERVER>/<IMAGE_NAME>:latest`
 
 ## Verify Deployment
 
-After a successful build, verify the image in ACR:
-
 ```bash
-az acr repository list --name myacrlab12345
-az acr repository show-tags --name myacrlab12345 --repository app
+# List images in ACR
+az acr repository list --name <YOUR_ACR_NAME>
+
+# Show tags for the app image
+az acr repository show-tags --name <YOUR_ACR_NAME> --repository <IMAGE_NAME>
 ```
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **Authentication failed**: Verify the federated identity is configured correctly and the GitHub secret `AZURE_TENANT_ID` is set.
-
-2. **Permission denied on ACR**: Ensure the Managed Identity has `AcrPush` role on the registry.
-
-3. **Docker build fails**: Check your Dockerfile is valid and all dependencies are available.
-
-### Useful Commands
+### Check Managed Identity
 
 ```bash
-# Check Managed Identity
-az identity show --resource-group aia-mi --name aia-mi
+az identity show --resource-group <YOUR_RESOURCE_GROUP> --name <YOUR_MANAGED_IDENTITY_NAME>
+```
 
-# List ACR repositories
-az acr repository list --name myacrlab12345
+### Check Federated Credential
 
-# View workflow logs
-# Go to GitHub → Actions → Select the workflow run
+```bash
+az identity federated-credential list --resource-group <YOUR_RESOURCE_GROUP> --identity-name <YOUR_MANAGED_IDENTITY_NAME>
+```
+
+### Check ACR Permissions
+
+```bash
+az role assignment list \
+  --assignee <YOUR_CLIENT_ID> \
+  --scope /subscriptions/<YOUR_SUBSCRIPTION_ID>/resourceGroups/<YOUR_RESOURCE_GROUP>/providers/Microsoft.ContainerRegistry/registries/<YOUR_ACR_NAME>
 ```

@@ -1,0 +1,29 @@
+name: Main Pipeline Router
+
+on:
+  push:
+    branches:
+      - dev
+      - uat
+  workflow_dispatch:
+
+jobs:
+  router:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Display Route Info
+        run: |
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Triggering corresponding environment pipeline..."
+
+  dev-pipeline:
+    needs: router
+    if: github.ref_name == 'dev'
+    uses: ./.github/workflows/dev.yml
+    secrets: inherit
+
+  uat-pipeline:
+    needs: router
+    if: github.ref_name == 'uat'
+    uses: ./.github/workflows/uat.yml
+    secrets: inherit
