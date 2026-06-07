@@ -7,6 +7,8 @@ env:
   ACR_NAME: myacrlab12345
   ACR_LOGIN_SERVER: myacrlab12345.azurecr.io
   IMAGE_NAME: app
+  RESOURCE_GROUP: aia-mi
+  AKS_CLUSTER_NAME: thss
 
 permissions:
   id-token: write
@@ -57,6 +59,29 @@ jobs:
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
+
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AKS_CLUSTER_NAME }} \
+            --overwrite-existing
+
+      - name: Deploy to AKS
+        run: |
+          # Replace image placeholder with actual image
+          sed -i "s|IMAGE_PLACEHOLDER|${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.IMAGE_TAG }}|g" k8s/deployment.yaml
+          
+          # Apply deployment
+          kubectl apply -n testing -f k8s/deployment.yaml
+          
+          # Wait for rollout
+          kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n testing --timeout=120s
+
+      - name: Verify Deployment
+        run: |
+          kubectl get pods -n testing -l app=${{ env.IMAGE_NAME }}
+          kubectl get service -n testing ${{ env.IMAGE_NAME }}
 
       - name: Logout from Azure
         if: always()
