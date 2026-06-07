@@ -83,14 +83,19 @@ jobs:
         run: |
           IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.image-tag }}"
           echo "Deploying image: $IMAGE"
-          kubectl -n ${{ env.NAMESPACE }} set image deployment/${{ env.IMAGE_NAME }} \
-            ${{ env.IMAGE_NAME }}=$IMAGE
-          kubectl -n ${{ env.NAMESPACE }} rollout status deployment/${{ env.IMAGE_NAME }}
+          
+          # Update image in deployment.yaml
+          sed -i "s|image: .*|image: $IMAGE|g" k8s/deployment.yaml
+          
+          # Apply deployment
+          kubectl apply -n ${{ env.NAMESPACE }} -f k8s/deployment.yaml
+          
+          # Wait for rollout
+          kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }} --timeout=120s
 
-      - name: Update deployment.yaml and commit
+      - name: Commit updated deployment.yaml
         run: |
           IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.image-tag }}"
-          sed -i "s|image: .*|image: $IMAGE|g" k8s/deployment.yaml
           
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
