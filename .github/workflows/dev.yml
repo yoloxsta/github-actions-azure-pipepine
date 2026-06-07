@@ -73,7 +73,7 @@ jobs:
     needs: [build-push, scan]
     runs-on: self-hosted
     env:
-      NAMESPACE: github-runner
+      NAMESPACE: default
     
     steps:
       - name: Checkout code
