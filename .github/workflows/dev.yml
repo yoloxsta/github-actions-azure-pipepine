@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   build-push:
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, aks]
     outputs:
       image-tag: ${{ steps.tag.outputs.IMAGE_TAG }}
     
@@ -56,7 +56,7 @@ jobs:
 
   scan:
     needs: build-push
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, aks]
     
     steps:
       - name: Run Trivy vulnerability scanner
@@ -71,9 +71,9 @@ jobs:
 
   deploy:
     needs: [build-push, scan]
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux, aks]
     env:
-      NAMESPACE: default
+      NAMESPACE: testing
     
     steps:
       - name: Checkout code
