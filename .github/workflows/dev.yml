@@ -86,6 +86,7 @@ jobs:
         run: |
           IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
           echo "Deploying image: $IMAGE"
+          echo "IMAGE_TAG=${{ needs.build-push.outputs.IMAGE_TAG }}" >> $GITHUB_ENV
           
           # Update image in deployment.yaml
           sed -i "s|image: .*|image: $IMAGE|g" k8s/deployment.yaml
@@ -111,14 +112,8 @@ jobs:
         run: |
           kubectl get pods -n ${{ env.NAMESPACE }} -l app=${{ env.IMAGE_NAME }}
           kubectl get service -n ${{ env.NAMESPACE }} ${{ env.IMAGE_NAME }}
-
-  show-image-tag:
-    needs: deploy
-    runs-on: [self-hosted, linux, aks]
-    
-    steps:
-      - name: Display new image tag
-        run: |
+          
+          echo ""
           echo "========================================"
           echo "  NEW RUNNING IMAGE TAG"
           echo "========================================"
