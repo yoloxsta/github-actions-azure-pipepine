@@ -107,7 +107,8 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add k8s/deployment.yaml
           git commit -m "chore: update image to $IMAGE [skip ci]"
-          git push
+          git pull --rebase origin dev
+          git push origin dev
 
   rollback:
     needs: [build-push, scan]
@@ -142,7 +143,8 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add k8s/deployment.yaml
           git commit -m "rollback: revert to $CURRENT_IMAGE [skip ci]"
-          git push
+          git pull --rebase origin dev
+          git push origin dev
 
       - name: Verify Rollback
         run: |
