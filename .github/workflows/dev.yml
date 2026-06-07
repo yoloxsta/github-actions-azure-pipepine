@@ -108,3 +108,18 @@ jobs:
         run: |
           kubectl get pods -n ${{ env.NAMESPACE }} -l app=${{ env.IMAGE_NAME }}
           kubectl get service -n ${{ env.NAMESPACE }} ${{ env.IMAGE_NAME }}
+
+  show-image-tag:
+    needs: deploy
+    runs-on: [self-hosted, linux, aks]
+    
+    steps:
+      - name: Display new image tag
+        run: |
+          echo "========================================"
+          echo "  NEW RUNNING IMAGE TAG"
+          echo "========================================"
+          echo ""
+          echo "  Image: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.image-tag }}"
+          echo ""
+          echo "========================================"
