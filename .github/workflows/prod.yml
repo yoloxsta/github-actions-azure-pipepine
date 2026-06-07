@@ -1,0 +1,42 @@
+name: Prod Pipeline
+
+on:
+  workflow_call:
+
+env:
+  ACR_NAME: myacrlab12345
+  ACR_LOGIN_SERVER: myacrlab12345.azurecr.io
+  IMAGE_NAME: app
+  IMAGE_TAG: prod-latest
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    environment: prod
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and Push using ACR Tasks
+        run: |
+          az acr build \
+            --registry ${{ env.ACR_NAME }} \
+            --image ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
+            --file Dockerfile \
+            .
+
+      - name: Logout from Azure
+        if: always()
+        run: az logout
