@@ -4,8 +4,12 @@ on:
   workflow_dispatch:
 
 env:
+  # ACR Configuration
   ACR_LOGIN_SERVER: myacrlab12345.azurecr.io
   IMAGE_NAME: app
+  # AKS Dev Cluster Configuration
+  AKS_CLUSTER_NAME: thss
+  AKS_RESOURCE_GROUP: aia-mi
   NAMESPACE: testing
 
 permissions:
@@ -23,6 +27,8 @@ jobs:
       - name: Rollback to previous version
         run: |
           echo "Rolling back to previous deployment..."
+          echo "Cluster: ${{ env.AKS_CLUSTER_NAME }}"
+          echo "Namespace: ${{ env.NAMESPACE }}"
           kubectl rollout undo deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }}
           kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }} --timeout=120s
 
@@ -35,9 +41,9 @@ jobs:
           echo "========================================"
           echo "  ROLLBACK COMPLETE"
           echo "========================================"
-          echo ""
+          echo "  Cluster: ${{ env.AKS_CLUSTER_NAME }}"
+          echo "  Namespace: ${{ env.NAMESPACE }}"
           echo "  Current Image: $CURRENT_IMAGE"
-          echo ""
           echo "========================================"
 
       - name: Update deployment.yaml
