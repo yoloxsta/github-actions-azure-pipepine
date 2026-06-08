@@ -21,14 +21,22 @@ jobs:
     runs-on: [self-hosted, linux, aks]
     
     steps:
-      - name: Checkout code
+      - name: Checkout manifest repo
         uses: actions/checkout@v4
+        with:
+          repository: yoloxsta/github-actions-azure-k8s-manifest
+          token: ${{ secrets.MANIFEST_REPO_TOKEN }}
+          ref: dev
 
       - name: Rollback to previous version
         run: |
-          echo "Rolling back to previous deployment..."
-          echo "Cluster: ${{ env.AKS_CLUSTER_NAME }}"
-          echo "Namespace: ${{ env.NAMESPACE }}"
+          echo "========================================"
+          echo "  ROLLING BACK DEPLOYMENT"
+          echo "========================================"
+          echo "  Cluster: ${{ env.AKS_CLUSTER_NAME }}"
+          echo "  Namespace: ${{ env.NAMESPACE }}"
+          echo "========================================"
+          
           kubectl rollout undo deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }}
           kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }} --timeout=120s
 
@@ -49,15 +57,15 @@ jobs:
       - name: Update deployment.yaml
         run: |
           CURRENT_IMAGE="${{ steps.get-image.outputs.CURRENT_IMAGE }}"
-          sed -i "s|image: .*|image: $CURRENT_IMAGE|g" k8s/deployment.yaml
+          sed -i "s|image: .*|image: $CURRENT_IMAGE|g" deployment.yaml
 
-      - name: Commit rolled-back deployment.yaml
+      - name: Commit rolled-back manifest
         run: |
           CURRENT_IMAGE="${{ steps.get-image.outputs.CURRENT_IMAGE }}"
           
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add k8s/deployment.yaml
+          git add deployment.yaml
           git commit -m "rollback: revert to $CURRENT_IMAGE [skip ci]"
           git pull --rebase origin dev
           git push origin dev
