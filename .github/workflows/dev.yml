@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   build-push:
-    runs-on: [self-hosted, linux, aks]
+    runs-on: [self-hosted, linux, aks] 
     outputs:
       IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
     

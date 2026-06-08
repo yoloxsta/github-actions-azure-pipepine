@@ -4,25 +4,28 @@ on:
   workflow_call:
 
 env:
+  # ACR Configuration
   ACR_NAME: myacrlab12345
   ACR_LOGIN_SERVER: myacrlab12345.azurecr.io
   IMAGE_NAME: app
+  # AKS UAT Cluster Configuration
+  AKS_CLUSTER_NAME: staso
+  AKS_RESOURCE_GROUP: aia-mi
+  NAMESPACE: uat
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
+  build-push:
+    runs-on: [self-hosted, linux, aks] 
+    outputs:
+      IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set image tag
-        id: tag
-        run: echo "IMAGE_TAG=uat-${GITHUB_SHA:0:4}" >> $GITHUB_OUTPUT
 
       - name: Azure Login with OIDC
         uses: azure/login@v2
@@ -33,6 +36,13 @@ jobs:
 
       - name: Login to ACR
         run: az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Set image tag
+        id: tag
+        run: |
+          IMAGE_TAG="uat-${GITHUB_SHA:0:4}"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "Generated image tag: $IMAGE_TAG"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -48,16 +58,71 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Logout from Azure
+        if: always()
+        run: az logout
+
+  scan:
+    needs: build-push
+    runs-on: [self-hosted, linux, aks]
+    
+    steps:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.IMAGE_TAG }}
+          image-ref: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}
           format: 'table'
           exit-code: '0'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 
-      - name: Logout from Azure
-        if: always()
-        run: az logout
+  deploy:
+    needs: [build-push, scan]
+    runs-on: [self-hosted, linux, aks]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to AKS
+        run: |
+          IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
+          echo "Deploying image: $IMAGE"
+          echo "Cluster: ${{ env.AKS_CLUSTER_NAME }}"
+          echo "Namespace: ${{ env.NAMESPACE }}"
+          echo "IMAGE_TAG=${{ needs.build-push.outputs.IMAGE_TAG }}" >> $GITHUB_ENV
+          
+          # Update image in deployment.yaml
+          sed -i "s|image: .*|image: $IMAGE|g" k8s/deployment.yaml
+          
+          # Apply deployment
+          kubectl apply -n ${{ env.NAMESPACE }} -f k8s/deployment.yaml
+          
+          # Wait for rollout
+          kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }} --timeout=120s
+
+      - name: Commit updated deployment.yaml
+        run: |
+          IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
+          
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add k8s/deployment.yaml
+          git commit -m "chore: update image to $IMAGE [skip ci]"
+          git pull --rebase origin uat
+          git push origin uat
+
+      - name: Verify Deployment
+        run: |
+          echo "========================================"
+          echo "  UAT DEPLOYMENT SUMMARY"
+          echo "========================================"
+          echo "  Cluster: ${{ env.AKS_CLUSTER_NAME }}"
+          echo "  Namespace: ${{ env.NAMESPACE }}"
+          echo "  Image: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
+          echo "========================================"
+          echo ""
+          
+          kubectl get pods -n ${{ env.NAMESPACE }} -l app=${{ env.IMAGE_NAME }}
+          kubectl get service -n ${{ env.NAMESPACE }} ${{ env.IMAGE_NAME }}
