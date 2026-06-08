@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
       - name: app
-        image: myacrlab12345.azurecr.io/app:dev-b6c4
+        image: myacrlab12345.azurecr.io/app:dev-6f95
         ports:
         - containerPort: 8080
         envFrom:
