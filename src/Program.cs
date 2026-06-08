@@ -15,11 +15,17 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Get config from environment (ConfigMap)
+var appName = Environment.GetEnvironmentVariable("APP_NAME") ?? "ACR Pipeline Demo";
+var appVersion = Environment.GetEnvironmentVariable("APP_VERSION") ?? "1.0.0";
+var environment = Environment.GetEnvironmentVariable("ENVIRONMENT") ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+var logLevel = Environment.GetEnvironmentVariable("LOG_LEVEL") ?? "Information";
+
 // Endpoints
 app.MapGet("/", () => Results.Ok(new
 {
-    message = "Welcome to ACR Pipeline Demo",
-    environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production",
+    message = $"Welcome to {appName}",
+    environment = environment,
     timestamp = DateTime.UtcNow
 }));
 
@@ -31,10 +37,19 @@ app.MapGet("/health", () => Results.Ok(new
 
 app.MapGet("/api/info", () => Results.Ok(new
 {
-    application = "ACR Pipeline Demo",
-    version = "1.0.0",
-    environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production",
+    application = appName,
+    version = appVersion,
+    environment = environment,
+    logLevel = logLevel,
     machineName = Environment.MachineName
+}));
+
+app.MapGet("/api/config", () => Results.Ok(new
+{
+    APP_NAME = appName,
+    APP_VERSION = appVersion,
+    ENVIRONMENT = environment,
+    LOG_LEVEL = logLevel
 }));
 
 app.Run();
