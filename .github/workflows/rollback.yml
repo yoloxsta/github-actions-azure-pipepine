@@ -48,11 +48,11 @@ jobs:
           echo ""
           echo "========================================"
           echo "  ROLLBACK COMPLETE"
-          echo "========================================"
+          echo "============================================"
           echo "  Cluster: ${{ env.AKS_CLUSTER_NAME }}"
           echo "  Namespace: ${{ env.NAMESPACE }}"
           echo "  Current Image: $CURRENT_IMAGE"
-          echo "========================================"
+          echo "============================================"
 
       - name: Update deployment.yaml
         run: |
