@@ -4,9 +4,14 @@ on:
   workflow_call:
 
 env:
+  # ACR Configuration
   ACR_NAME: myacrlab12345
   ACR_LOGIN_SERVER: myacrlab12345.azurecr.io
   IMAGE_NAME: app
+  # AKS Dev Cluster Configuration
+  AKS_CLUSTER_NAME: thss
+  AKS_RESOURCE_GROUP: aia-mi
+  NAMESPACE: testing
 
 permissions:
   id-token: write
@@ -75,8 +80,6 @@ jobs:
   deploy:
     needs: [build-push, scan]
     runs-on: [self-hosted, linux, aks]
-    env:
-      NAMESPACE: testing
     
     steps:
       - name: Checkout code
@@ -86,6 +89,8 @@ jobs:
         run: |
           IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
           echo "Deploying image: $IMAGE"
+          echo "Cluster: ${{ env.AKS_CLUSTER_NAME }}"
+          echo "Namespace: ${{ env.NAMESPACE }}"
           echo "IMAGE_TAG=${{ needs.build-push.outputs.IMAGE_TAG }}" >> $GITHUB_ENV
           
           # Update image in deployment.yaml
@@ -110,14 +115,14 @@ jobs:
 
       - name: Verify Deployment
         run: |
+          echo "========================================"
+          echo "  DEV DEPLOYMENT SUMMARY"
+          echo "========================================"
+          echo "  Cluster: ${{ env.AKS_CLUSTER_NAME }}"
+          echo "  Namespace: ${{ env.NAMESPACE }}"
+          echo "  Image: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
+          echo "========================================"
+          echo ""
+          
           kubectl get pods -n ${{ env.NAMESPACE }} -l app=${{ env.IMAGE_NAME }}
           kubectl get service -n ${{ env.NAMESPACE }} ${{ env.IMAGE_NAME }}
-          
-          echo ""
-          echo "========================================"
-          echo "  NEW RUNNING IMAGE TAG"
-          echo "========================================"
-          echo ""
-          echo "  Image: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
-          echo ""
-          echo "========================================"
