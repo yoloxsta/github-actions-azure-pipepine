@@ -135,7 +135,6 @@ git push origin uat
 git checkout -b prod
 git push origin prod
 ```
-
 ### Manual dispatch
 
 1. Go to Actions tab
