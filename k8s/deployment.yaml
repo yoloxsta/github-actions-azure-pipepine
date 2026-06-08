@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: app
-        image: myacrlab12345.azurecr.io/app:dev-eaa6
+        image: myacrlab12345.azurecr.io/app:dev-c43c
         ports:
         - containerPort: 8080
         resources:
