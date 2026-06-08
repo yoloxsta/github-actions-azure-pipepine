@@ -32,11 +32,11 @@ RUN adduser --disabled-password --gecos '' appuser
 COPY --from=publish /app/publish .
 
 # Set environment
-ENV ASPNETCORE_URLS=http://+:80
+ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 
 # Expose port
-EXPOSE 80
+EXPOSE 8080
 
 # Switch to non-root user
 USER appuser
