@@ -195,7 +195,6 @@ az identity show --resource-group <YOUR_RESOURCE_GROUP> --name <YOUR_MANAGED_IDE
 ```bash
 az identity federated-credential list --resource-group <YOUR_RESOURCE_GROUP> --identity-name <YOUR_MANAGED_IDENTITY_NAME>
 ```
-
 ### Check ACR Permissions
 
 ```bash
