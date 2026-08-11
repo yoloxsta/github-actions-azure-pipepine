@@ -10,7 +10,7 @@ env:
   IMAGE_NAME: app
   # AKS Dev Cluster Configuration
   AKS_CLUSTER_NAME: thss
-  AKS_RESOURCE_GROUP: aia-mi
+  AKS_RESOURCE_GROUP: thss
   NAMESPACE: testing
 
 permissions:
