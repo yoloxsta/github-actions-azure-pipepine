@@ -34,7 +34,6 @@ jobs:
         az version
 
     - name: Azure Login with OIDC
-      id: azure-login
       uses: azure/login@v2
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -42,11 +41,11 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     - name: Login to ACR
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.ACR_LOGIN_SERVER }}
-        username: ${{ fromJson(steps.azure-login.outputs.credentials).clientId }}
-        password: ${{ fromJson(steps.azure-login.outputs.credentials).clientSecret }}
+      run: |
+        # Get ACR access token using Azure CLI
+        ACR_TOKEN=$(az acr login --name ${{ env.ACR_NAME }} --expose-token --output tsv --query accessToken)
+        # Login to Docker using the token
+        echo "${ACR_TOKEN}" | docker login ${{ env.ACR_LOGIN_SERVER }} --username 00000000-0000-0000-0000-000000000000 --password-stdin
 
     - name: Set image tag
       id: tag
