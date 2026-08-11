@@ -16,5 +16,6 @@ jobs:
           echo "Hello from ARC runner!"
           echo "Runner: $RUNNER_NAME"
           echo "OS: $RUNNER_OS"
+          echo "SoeTintAung"
           hostname
           uname -a
