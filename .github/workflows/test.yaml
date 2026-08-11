@@ -1,0 +1,20 @@
+name: ARC Test
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: arc-runner-set
+
+    steps:
+      - name: Test ARC Runner
+        run: |
+          echo "Hello from ARC runner!"
+          echo "Runner: $RUNNER_NAME"
+          echo "OS: $RUNNER_OS"
+          hostname
+          uname -a
