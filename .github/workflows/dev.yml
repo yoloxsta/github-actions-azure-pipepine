@@ -19,12 +19,12 @@ permissions:
 
 jobs:
   build-push:
-  runs-on: arc-runner-set
+    runs-on: arc-runner-set
 
-  outputs:
-    IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
+    outputs:
+      IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
 
-  steps:
+    steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
