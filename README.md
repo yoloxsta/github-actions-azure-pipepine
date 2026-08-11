@@ -260,3 +260,11 @@ az identity federated-credential create \
   --audiences api://AzureADTokenExchange
 
 ```
+
+##  Create the ClusterRoleBinding for UAMI
+```
+kubectl create clusterrolebinding mi-ado-agent-admin \
+  --clusterrole=admin \
+  --user=4aabd5c7-07bc-4b18-8895-478c2ced7741
+
+```
