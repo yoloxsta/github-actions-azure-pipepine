@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   build-push:
-    runs-on: [self-hosted, linux, aks] 
+    runs-on: arc-runner-set
     outputs:
       IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
     
@@ -64,7 +64,7 @@ jobs:
 
   scan:
     needs: build-push
-    runs-on: [self-hosted, linux, aks]
+    runs-on: arc-runner-set
     
     steps:
       - name: Run Trivy vulnerability scanner
@@ -79,7 +79,7 @@ jobs:
 
   deploy:
     needs: [build-push, scan]
-    runs-on: [self-hosted, linux, aks]
+    runs-on: arc-runner-set
     
     steps:
       - name: Checkout manifest repo
