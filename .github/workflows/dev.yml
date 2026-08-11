@@ -19,62 +19,52 @@ permissions:
 
 jobs:
   build-push:
-    runs-on: ubuntu-latest
-
+    runs-on: [self-hosted, linux, aks] 
     outputs:
       IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
-
+    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install Azure CLI
-      run: |
-        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-        az version
+      - name: Azure Login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-    - name: Azure Login with OIDC
-      uses: azure/login@v2
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Login to ACR
+        run: az acr login --name ${{ env.ACR_NAME }}
 
-    - name: Login to ACR
-      run: |
-        # Get ACR access token using Azure CLI
-        ACR_TOKEN=$(az acr login --name ${{ env.ACR_NAME }} --expose-token --output tsv --query accessToken)
-        # Login to Docker using the token
-        echo "${ACR_TOKEN}" | docker login ${{ env.ACR_LOGIN_SERVER }} --username 00000000-0000-0000-0000-000000000000 --password-stdin
+      - name: Set image tag
+        id: tag
+        run: |
+          IMAGE_TAG="dev-${GITHUB_SHA:0:4}"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "Generated image tag: $IMAGE_TAG"
 
-    - name: Set image tag
-      id: tag
-      run: |
-        IMAGE_TAG="dev-${GITHUB_SHA:0:4}"
-        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
-        echo "Generated image tag: $IMAGE_TAG"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.IMAGE_TAG }}
+          build-args: |
+            ASPNETCORE_ENVIRONMENT=Development
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        push: true
-        tags: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.IMAGE_TAG }}
-        build-args: |
-          ASPNETCORE_ENVIRONMENT=Development
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-    - name: Logout from Azure
-      if: always()
-      run: az logout
+      - name: Logout from Azure
+        if: always()
+        run: az logout
 
   scan:
     needs: build-push
-    runs-on: arc-runner-set
+    runs-on: [self-hosted, linux, aks] 
     
     steps:
       - name: Run Trivy vulnerability scanner
@@ -87,60 +77,60 @@ jobs:
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
 
-  # deploy:
-  #   needs: [build-push, scan]
-  #   runs-on: arc-runner-set
+  deploy:
+    needs: [build-push, scan]
+    runs-on: [self-hosted, linux, aks] 
     
-  #   steps:
-  #     - name: Checkout manifest repo
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: yoloxsta/github-actions-azure-k8s-manifest
-  #         token: ${{ secrets.MANIFEST_REPO_TOKEN }}
-  #         ref: dev
+    steps:
+      - name: Checkout manifest repo
+        uses: actions/checkout@v4
+        with:
+          repository: yoloxsta/github-actions-azure-k8s-manifest
+          token: ${{ secrets.MANIFEST_REPO_TOKEN }}
+          ref: dev
 
-      # - name: Deploy to AKS
-      #   run: |
-      #     IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
-      #     echo "========================================"
-      #     echo "  DEPLOYING TO AKS"
-      #     echo "========================================"
-      #     echo "  Cluster: ${{ env.AKS_CLUSTER_NAME }}"
-      #     echo "  Namespace: ${{ env.NAMESPACE }}"
-      #     echo "  Image: $IMAGE"
-      #     echo "========================================"
+      - name: Deploy to AKS
+        run: |
+          IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
+          echo "========================================"
+          echo "  DEPLOYING TO AKS"
+          echo "========================================"
+          echo "  Cluster: ${{ env.AKS_CLUSTER_NAME }}"
+          echo "  Namespace: ${{ env.NAMESPACE }}"
+          echo "  Image: $IMAGE"
+          echo "========================================"
           
-      #     # Update image in deployment.yaml
-      #     sed -i "s|image: .*|image: $IMAGE|g" deployment.yaml
+          # Update image in deployment.yaml
+          sed -i "s|image: .*|image: $IMAGE|g" deployment.yaml
           
-      #     # Apply deployment
-      #     kubectl apply -n ${{ env.NAMESPACE }} -f deployment.yaml
+          # Apply deployment
+          kubectl apply -n ${{ env.NAMESPACE }} -f deployment.yaml
           
-      #     # Wait for rollout
-      #     kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }} --timeout=120s
+          # Wait for rollout
+          kubectl rollout status deployment/${{ env.IMAGE_NAME }} -n ${{ env.NAMESPACE }} --timeout=120s
 
-      # - name: Commit updated manifest
-      #   run: |
-      #     IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
+      - name: Commit updated manifest
+        run: |
+          IMAGE="${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
           
-      #     git config --global user.name "github-actions[bot]"
-      #     git config --global user.email "github-actions[bot]@users.noreply.github.com"
-      #     git add deployment.yaml
-      #     git commit -m "chore: update image to $IMAGE [skip ci]"
-      #     git pull --rebase origin dev
-      #     git push origin dev
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add deployment.yaml
+          git commit -m "chore: update image to $IMAGE [skip ci]"
+          git pull --rebase origin dev
+          git push origin dev
 
-      # - name: Verify Deployment
-      #   run: |
-      #     echo ""
-      #     echo "========================================"
-      #     echo "  DEV DEPLOYMENT SUMMARY"
-      #     echo "========================================"
-      #     echo "  Cluster: ${{ env.AKS_CLUSTER_NAME }}"
-      #     echo "  Namespace: ${{ env.NAMESPACE }}"
-      #     echo "  Image: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
-      #     echo "========================================"
-      #     echo ""
+      - name: Verify Deployment
+        run: |
+          echo ""
+          echo "========================================"
+          echo "  DEV DEPLOYMENT SUMMARY"
+          echo "========================================"
+          echo "  Cluster: ${{ env.AKS_CLUSTER_NAME }}"
+          echo "  Namespace: ${{ env.NAMESPACE }}"
+          echo "  Image: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ needs.build-push.outputs.IMAGE_TAG }}"
+          echo "========================================"
+          echo ""
           
-      #     kubectl get pods -n ${{ env.NAMESPACE }} -l app=${{ env.IMAGE_NAME }}
-      #     kubectl get service -n ${{ env.NAMESPACE }} ${{ env.IMAGE_NAME }}
+          kubectl get pods -n ${{ env.NAMESPACE }} -l app=${{ env.IMAGE_NAME }}
+          kubectl get service -n ${{ env.NAMESPACE }} ${{ env.IMAGE_NAME }}
