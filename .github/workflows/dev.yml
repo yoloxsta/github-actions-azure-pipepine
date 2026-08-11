@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   build-push:
-    runs-on: arc-runner-set
+    runs-on: ubuntu-latest
 
     outputs:
       IMAGE_TAG: ${{ steps.tag.outputs.IMAGE_TAG }}
